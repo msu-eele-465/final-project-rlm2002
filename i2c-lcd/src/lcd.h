@@ -25,17 +25,10 @@
 #define lcd_send_command(cmd) lcd_send((cmd), 0)
 #define lcd_send_data(data)   lcd_send((data), 1)
 
-#define WINDOW_CHANGE           0x41      // A
-#define PATTERN_CHANGE          0x42      // B
-#define TEMP_UNIT_CHANGE        0x43      // C
-#define LOCK                    0x44      // D
-#define CHANGE_PERMITTED        0x47      // G
-
 /**
 * initialize lcd outputs and begin startup process
 */
 void init_lcd();
-
 
 /**
 * send character codes for data
@@ -52,28 +45,11 @@ void lcd_send(uint8_t data, uint8_t is_data);
 void lcd_send_string(char *str);
 
 /**
-* select a string to send given a choice
-* 
-* @param: byte of data
-*/
-void lcd_choose_string(uint8_t data);
-
-/**
-* display the current pattern on the LCD
-*/
-void lcd_disp_pattern();
-
-/**
-* set window size
-* 
-* @param: byte of data (window size n)
-*/
-void lcd_set_window_size(uint8_t data);
-
-/**
 * set temperature to the 3 digits that've been sent over
+* @param mode : using ambient or plant temp
+* @param data : array for temp
 */
-void lcd_set_temperature();
+void lcd_set_temperature(uint8_t mode, uint8_t *data);
 
 /**
 * toggle cursor on lcd
@@ -94,5 +70,10 @@ void lcd_set_function();
 * clear line
 */ 
 void lcd_clear_line(uint8_t cmd);
+
+/*
+* load custom characters to cgram
+*/
+void load_custom_chars();
 
 #endif

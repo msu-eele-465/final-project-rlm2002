@@ -60,9 +60,9 @@ int main(void)
 
     // variable initiation
 
-    data = 0;
-    data_recieved_count = 0;
-    data_received = 0;
+    // data = 0;
+    // data_recieved_count = 0;
+    // data_received = 0;
 
     __enable_interrupt();       // Enable Maskable IRQs
 
@@ -85,16 +85,15 @@ int main(void)
 #pragma vector = EUSCI_B0_VECTOR
 __interrupt void receive_data(void)
 {
-    switch(UCB0IV)             // determines which IFG has been triggered
-    {
-    case USCI_I2C_UCRXIFG0:                 // ID 0x16: Rx IFG
-        data_received = 1;
-        data = UCB0RXBUF;                   // retrieve data
-        lcd_choose_string(data);
-        break;
-    default:
-        break;
-    }
+    // switch(UCB0IV)             // determines which IFG has been triggered
+    // {
+    // // case USCI_I2C_UCRXIFG0:                 // ID 0x16: Rx IFG
+    // //     data_received = 1;
+    // //     data = UCB0RXBUF;                   // retrieve data
+    // //     break;
+    // default:
+    //     break;
+    // }
 
 }
 //----- end receiveData------------
@@ -106,19 +105,19 @@ __interrupt void receive_data(void)
 __interrupt void heartbeat_LED(void)
 {
     P2OUT ^= BIT0;          // P2.0 xOR
-    if(data_received != 0)
-    {
-        // Math: .2s = (1*10^-6)(D1)(D2)(5k)    D1 = 5, D2 = 8
-        TB0CCR0 = 5000;
-        data_recieved_count++;
+    // if(data_received != 0)
+    // {
+    //     // Math: .2s = (1*10^-6)(D1)(D2)(5k)    D1 = 5, D2 = 8
+    //     TB0CCR0 = 5000;
+    //     data_recieved_count++;
         
-        if(data_recieved_count == 10)
-        {
-            data_received = 0;
-            data_recieved_count = 0;
-            TB0CCR0 = 25000;
-        }
-    }
+    //     if(data_recieved_count == 10)
+    //     {
+    //         data_received = 0;
+    //         data_recieved_count = 0;
+    //         TB0CCR0 = 25000;
+    //     }
+    // }
 
 
     TB0CCTL0 &= ~CCIFG;     // clear flag
