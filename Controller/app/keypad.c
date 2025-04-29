@@ -83,13 +83,13 @@ int reset_pk(char *passkey){
     }
 }
 
-int check_status(Keypad *keypad, char pk_attempt[]){
-    int ret;
-    ret = compare_pw(keypad->passkey, pk_attempt);
-    if (ret != SUCCESS){
-       return FAILURE;
-    } else {
-        keypad->lock_state = UNLOCKED;
-        return SUCCESS;
-    }
-}
+// int check_status(Keypad *keypad, char pk_attempt[]){
+//     int ret;
+//     ret = compare_pw(keypad->passkey, pk_attempt);
+//     if (ret != SUCCESS){
+//        return FAILURE;
+//     } else {
+//         keypad->lock_state = UNLOCKED;
+//         return SUCCESS;
+//     }
+// }

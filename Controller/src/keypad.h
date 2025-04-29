@@ -42,7 +42,6 @@ typedef struct {
     int lock_state;
     int row_pins[4];      // order is 5, 6, 7, 8
     int col_pins[4];      // order is 1, 2, 3, 4
-    char passkey[2];
 } Keypad;
 
 extern char key_chars [4][4];
