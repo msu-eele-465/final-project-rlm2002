@@ -12,6 +12,7 @@
 game_state current_game_state = IDLE;
 uint8_t ten_sec = 0, ones_sec = 0;          // tens place and ones place for timer
 uint8_t value = 0;
+char cur_char = 'x';
 
 // PERSISTENT stores vars in FRAM so they stick around through power cycles
 __attribute__((persistent)) static rgb_LED led1 =
