@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 
-void init_LED(status_LED *sl)
+void init_LED(rgb_LED *sl)
 {
      // Configure GPIO
     P6DIR |= sl->red_port_bit + sl->green_port_bit + sl->blue_port_bit;
@@ -20,7 +20,7 @@ void init_LED(status_LED *sl)
     TB3CCTL1 = OUTMOD_7;                      // CCR1 reset/set (red)
     TB3CCTL2 = OUTMOD_7;                      // CCR2 reset/set (green)
     TB3CCTL3 = OUTMOD_7;                      // CCR3 reset/set (blue)
-    // start locked
+    // start OFF
     TB3CCR1 = 0;                              // CCR1 PWM duty cycle: Amount of red 
     TB3CCR2 = 0;                               // CCR2 PWM duty cycle: Amount of green 
     TB3CCR3 = 0;                               // CCR3 PWM duty cycle: Amount of blue
@@ -29,7 +29,7 @@ void init_LED(status_LED *sl)
     PM5CTL0 &= ~LOCKLPM5;   // turn on GPIO 
 }
 
-void set_LED(status_LED *sl, LED_State s)
+void set_LED(rgb_LED *sl, LED_State s)
 {
     sl->current_state = s;
     TB3CTL &= ~MC__UP;  // setting MC=0 to stop timer
@@ -43,33 +43,33 @@ void set_LED(status_LED *sl, LED_State s)
             break;
 
         case ORANGE:     
-            TB3CCR1 = 220;  
-            TB3CCR2 = 165;   
+            TB3CCR1 = 170;  
+            TB3CCR2 = 180;   
             TB3CCR3 = 0;   
             break;
 
         case YELLOW:      
-            TB3CCR1 = 255;  
-            TB3CCR2 = 255;   
-            TB3CCR3 = 0;   
+            TB3CCR1 = 196;  
+            TB3CCR2 = 146;   
+            TB3CCR3 = 29;   
             break;
 
         case GREEN:
-            TB3CCR1 = 0;  
-            TB3CCR2 = 128;   
-            TB3CCR3 = 0;   
+            TB3CCR1 = 10;  
+            TB3CCR2 = 196;   
+            TB3CCR3 = 26;   
             break;
 
         case BLUE:
             TB3CCR1 = 0;  
             TB3CCR2 = 0;   
-            TB3CCR3 = 255;   
+            TB3CCR3 = 250;   
             break;
 
         case PURPLE:
-            TB3CCR1 = 128;  
-            TB3CCR2 = 0;   
-            TB3CCR3 = 128;   
+            TB3CCR1 = 70;  
+            TB3CCR2 = 50;   
+            TB3CCR3 = 255;   
             break;
         
         case CYAN:
@@ -87,7 +87,7 @@ void set_LED(status_LED *sl, LED_State s)
         case LIME:
             TB3CCR1 = 0;  
             TB3CCR2 = 255;   
-            TB3CCR3 = 0;   
+            TB3CCR3 = 10;   
             break;
         
         case MAGENTA:

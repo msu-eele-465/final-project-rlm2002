@@ -4,8 +4,9 @@
 *
 */
 #include <msp430.h>
-#include "keypad.h"
-#include "msp430fr2310.h"
+#include "intrinsics.h"
+#include "src/keypad.h"
+#include "msp430fr2355.h"
 #include "src/led.h"
 
 // PERSISTENT stores vars in FRAM so they stick around through power cycles
@@ -46,6 +47,8 @@ int main(void) {
     // to activate previously configured port settings
     __enable_interrupt();   // enable maskable IRQs
     PM5CTL0 &= ~LOCKLPM5;   // turn on GPIO
+
+    init_LED(&led1);
 
     while(1)
     {
