@@ -52,13 +52,17 @@ void init(){
     // button
     P4DIR &= ~BIT1;             // Configure P4.1 as input
     P4REN |= BIT1;              // Enable resistor
-    P4OUT &= ~ BIT1;              // Make pull down resistor (pull up if using dev board)
+    P4OUT |= BIT1;              // Make pull down resistor (pull up if using dev board)
     P4IES |= BIT1;              // Configure IRQ sensitivity H-to-L
 
     // dipswitch
     P3DIR &= ~(BIT0 | BIT1 | BIT2 | BIT3);      // set pins to output
     P3REN |= BIT0 | BIT1 | BIT2 | BIT3;         // enable resistor
     P3OUT &= ~(BIT0 | BIT1 | BIT2 | BIT3);      // pull down resistor
+
+    // buzzer
+    P2DIR |= BIT5;              // P2.5 to output
+    P2OUT &= ~BIT5;             // off to start
 
     // set up IRQ
     P4IFG &= ~BIT1;             // Clear P4.1 IRQ Flag
@@ -96,7 +100,6 @@ int main(void) {
         // if (current_game_state == IN_PROGRESS) {
         //     ret = scan_keypad(&ke, char *key_press)
         // }
-        value = value;
         __delay_cycles(100000);
     }
 }
@@ -111,7 +114,6 @@ int main(void) {
 __interrupt void heartbeat_LED(void)
 {
     P1OUT ^= BIT0;          // LED1 xOR
-    
     TB1CCTL0 &= ~CCIFG;     // clear flag
 }
 // ----- end heartbeat_LED-----
@@ -127,6 +129,10 @@ __interrupt void get_button_press(void)
     } else if (current_game_state == IN_PROGRESS) {
         current_game_state = CHECK;
     }
+    
+    P2OUT ^= BIT5;
+    __delay_cycles(10000);
+
     P4IFG &= ~BIT1;
 }
 // ----- end get_button_press-----
