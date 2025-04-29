@@ -30,6 +30,9 @@ int main(void) {
     // Disable watchdog timer
     WDTCTL = WDTPW | WDTHOLD;
 
+    // Disable watchdog timer
+    WDTCTL = WDTPW | WDTHOLD;
+
     // Timer B0
     // Math: 1s = (1*10^-6)(D1)(D2)(25k)    D1 = 5, D2 = 8
     TB0CTL |= TBCLR;            // Clear timer and dividers
@@ -37,6 +40,7 @@ int main(void) {
     TB0CTL |= MC__UP;           // Mode UP
     TB0CTL |= ID__8;            // divide by 8 
     TB0EX0 |= TBIDEX__5;        // divide by 5 (100)
+
 
     TB0CCR0 = 25000;
 
@@ -49,6 +53,7 @@ int main(void) {
     PM5CTL0 &= ~LOCKLPM5;   // turn on GPIO
 
     init_LED(&led1);
+
 
     while(1)
     {
