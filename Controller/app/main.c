@@ -52,7 +52,7 @@ void init(){
     // button
     P4DIR &= ~BIT1;             // Configure P4.1 as input
     P4REN |= BIT1;              // Enable resistor
-    P4OUT &= ~ BIT1;              // Make pull down resistor
+    P4OUT &= ~ BIT1;              // Make pull down resistor (pull up if using dev board)
     P4IES |= BIT1;              // Configure IRQ sensitivity H-to-L
 
     // dipswitch
