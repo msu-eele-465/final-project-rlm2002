@@ -48,16 +48,17 @@ void init(){
     // heartbeat led
     P1DIR |= BIT0;              // Config as Output
     P1OUT |= BIT0;              // turn on to start
+
     // button
     P4DIR &= ~BIT1;             // Configure P4.1 as input
     P4REN |= BIT1;              // Enable resistor
-    P4OUT |= BIT1;              // Make pull up resistor
+    P4OUT &= ~ BIT1;              // Make pull down resistor (pull up if using dev board)
     P4IES |= BIT1;              // Configure IRQ sensitivity H-to-L
 
     // dipswitch
-    P3DIR &= ~(BIT0 | BIT1 | BIT2 | BIT3);
-    P3REN |= BIT0 | BIT1 | BIT2 | BIT3;
-    P3OUT &= ~(BIT0 | BIT1 | BIT2 | BIT3);
+    P3DIR &= ~(BIT0 | BIT1 | BIT2 | BIT3);      // set pins to output
+    P3REN |= BIT0 | BIT1 | BIT2 | BIT3;         // enable resistor
+    P3OUT &= ~(BIT0 | BIT1 | BIT2 | BIT3);      // pull down resistor
 
     // set up IRQ
     P4IFG &= ~BIT1;             // Clear P4.1 IRQ Flag
