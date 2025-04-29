@@ -24,13 +24,25 @@
 #endif
 
 /**
+* game state definitions
+*/
+typedef enum
+{
+    IDLE,           // no game data needs to be saved. set everything to starting value
+    IN_PROGRESS,    // first button press 
+    CHECK,          // button press to check answer
+    WIN,            // if check is good
+    LOSE            // if win is not acheived within 30s
+} game_state;
+
+/**
 * row and column pins, passkey, and current state
 */
 typedef struct {
     int lock_state;
     int row_pins[4];      // order is 5, 6, 7, 8
     int col_pins[4];      // order is 1, 2, 3, 4
-    char passkey[4];
+    char passkey[2];
 } Keypad;
 
 extern char key_chars [4][4];
