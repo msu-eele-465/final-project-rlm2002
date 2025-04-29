@@ -4,37 +4,31 @@
 *
 */
 #include <msp430.h>
-#include "keypad.h"
+#include "intrinsics.h"
+#include "src/keypad.h"
+#include "msp430fr2355.h"
+#include "src/led.h"
 
 // PERSISTENT stores vars in FRAM so they stick around through power cycles
-__attribute__((persistent)) static status_LED led1 =
+__attribute__((persistent)) static rgb_LED led1 =
 {
-    .led_port_base_addr = P5_BASE,
     .red_port_bit = BIT0,
     .green_port_bit = BIT1,
     .blue_port_bit = BIT2,
-    .current_state = LEDLOCKED
+    .current_state = OFF
 };
-__attribute__((persistent)) static status_LED led2 =
+__attribute__((persistent)) static rgb_LED led2 =
 {
-    .led_port_base_addr = P5_BASE,
-    .red_port_bit = BIT0,
-    .green_port_bit = BIT1,
-    .blue_port_bit = BIT2,
-    .current_state = LEDLOCKED
-};
-__attribute__((persistent)) static status_LED led1 =
-{
-    .led_port_base_addr = P5_BASE,
-    .red_port_bit = BIT0,
-    .green_port_bit = BIT1,
-    .blue_port_bit = BIT2,
-    .current_state = LEDLOCKED
+    .red_port_bit = BIT3,
+    .green_port_bit = BIT4,
+    .blue_port_bit = BIT5,
+    .current_state = OFF
 };
 
 int main(void) {
 
-    volatile uint32_t i;
+    // Disable watchdog timer
+    WDTCTL = WDTPW | WDTHOLD;
 
     // Disable watchdog timer
     WDTCTL = WDTPW | WDTHOLD;
@@ -47,6 +41,7 @@ int main(void) {
     TB0CTL |= ID__8;            // divide by 8 
     TB0EX0 |= TBIDEX__5;        // divide by 5 (100)
 
+
     TB0CCR0 = 25000;
 
     TB0CCTL0 &= ~CCIFG;         // Clear CCR0
@@ -56,6 +51,9 @@ int main(void) {
     // to activate previously configured port settings
     __enable_interrupt();   // enable maskable IRQs
     PM5CTL0 &= ~LOCKLPM5;   // turn on GPIO
+
+    init_LED(&led1);
+
 
     while(1)
     {
