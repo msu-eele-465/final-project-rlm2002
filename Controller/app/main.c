@@ -119,6 +119,11 @@ int main(void) {
         } else if (current_game_state == IN_PROGRESS) {
             ret = scan_keypad(&keypad, &cur_char);
             if (ret == SUCCESS) {
+                // ignore non-digit input bc i literally do not want to bother with it
+                if (cur_char == 'A' || cur_char == 'B' || cur_char == 'C' || cur_char == 'D' ||
+                    cur_char == '*' || cur_char == '#') {
+                        continue;
+                }
                 // program will always set first led then second led
                 if (first_led_set == 0) {
                     first_led_set = 1;
