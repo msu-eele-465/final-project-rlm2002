@@ -3,6 +3,7 @@
 * @brief main controller for game
 *
 */
+#include <cstdint>
 #include <msp430.h>
 #include "intrinsics.h"
 #include "src/keypad.h"
@@ -13,6 +14,7 @@ game_state current_game_state = IDLE;
 uint8_t ten_sec = 0, ones_sec = 0;          // tens place and ones place for timer
 uint8_t value = 0;
 char cur_char = 'x';
+uint8_t first_led_set = 0;
 
 // PERSISTENT stores vars in FRAM so they stick around through power cycles
 __attribute__((persistent)) static rgb_LED led1 =
@@ -88,18 +90,43 @@ void init(){
     init_LED(&led1);
 }
 
+/**
+* get integer value of dipswitch
+*/
 uint8_t get_dipswitch() {
     return P3IN & 0x0F;
 }
 
+/**
+* inits lcd transmit
+*/
+void transmit_to_lcd()
+{
+    tx_byte_cnt = 16;
+    UCB0I2CSA = 0x0A;
+    while (UCB0CTLW0 & UCTXSTP);                      // Ensure stop condition got sent
+    UCB0CTLW0 |= UCTR | UCTXSTT;                      // I2C TX, start condition
+}
+
 int main(void) {
     init();
+    uint8_t ret = FAILURE;
 
     while(1)
     {
-        // if (current_game_state == IN_PROGRESS) {
-        //     ret = scan_keypad(&ke, char *key_press)
-        // }
+        if (current_game_state == IDLE) {
+            // transmit Push Start to line 1 of 
+        } else if (current_game_state == IN_PROGRESS) {
+            ret = scan_keypad(&keypad, &cur_char);
+            if (ret == SUCCESS) {
+                // program will always set first led then second led
+                if (first_led_set == 0) {
+                    first_led_set = 1;
+                } else {
+                    first_led_set = 0;
+                }
+            }
+        }
         __delay_cycles(100000);
     }
 }

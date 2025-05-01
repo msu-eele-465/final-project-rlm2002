@@ -10,8 +10,8 @@
 
 
 uint8_t data;
-uint8_t data_recieved_count;
-uint8_t data_received;
+uint8_t line;
+uint8_t ;
 
 int main(void)
 {
@@ -60,9 +60,9 @@ int main(void)
 
     // variable initiation
 
-    // data = 0;
-    // data_recieved_count = 0;
-    // data_received = 0;
+    data = 0;
+    line = 0;
+    data_received = 0;
 
     __enable_interrupt();       // Enable Maskable IRQs
 
@@ -85,15 +85,15 @@ int main(void)
 #pragma vector = EUSCI_B0_VECTOR
 __interrupt void receive_data(void)
 {
-    // switch(UCB0IV)             // determines which IFG has been triggered
-    // {
-    // // case USCI_I2C_UCRXIFG0:                 // ID 0x16: Rx IFG
-    // //     data_received = 1;
-    // //     data = UCB0RXBUF;                   // retrieve data
-    // //     break;
-    // default:
-    //     break;
-    // }
+    switch(UCB0IV)             // determines which IFG has been triggered
+    {
+    case USCI_I2C_UCRXIFG0:                 // ID 0x16: Rx IFG
+        data_received = 1;
+        data = UCB0RXBUF;                   // retrieve data
+        break;
+    default:
+        break;
+    }
 
 }
 //----- end receiveData------------
