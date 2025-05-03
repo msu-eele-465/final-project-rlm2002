@@ -23,7 +23,6 @@ typedef enum
     PURPLE,
     CYAN,
     PINK,
-    LIME,
     MAGENTA,
 } LED_State;
 
@@ -43,10 +42,11 @@ typedef struct rgb_LED
 * 
 * @param: pointer to the status_LED struct.
 * @param: s current state.
+* @param: indicator for which led is used
 *
 * @return: NA
 */
-void init_LED(rgb_LED *sL);
+void init_LED(rgb_LED *sL, uint8_t n);
 
 /**
 * Sets LEDs with right colors
@@ -56,9 +56,10 @@ void init_LED(rgb_LED *sL);
 * 
 * @param: sL constructor.
 * @param: s current state.
+* @param: indicator for which led is used
 *
 * @return: NA
 */
-void set_LED(rgb_LED *sL, LED_State s);
+void set_LED(rgb_LED *sL, LED_State s, uint8_t n);
 
 #endif // LED_H
