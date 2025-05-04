@@ -24,8 +24,8 @@ void init_lcd(){
     __delay_cycles(50000);
     lcd_set_function();
     DELAY_001;
-    load_custom_chars();
-    DELAY_001;
+    // load_custom_chars();
+    // DELAY_001;
     lcd_send_command(LCD_DISPLAY_ON);
     DELAY_001;
     lcd_send_command(LCD_ENTRY_MODE_SET);

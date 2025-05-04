@@ -57,13 +57,13 @@ void set_LED(rgb_LED *sl, LED_State s, uint8_t n)
 
             case ORANGE:     
                 TB3CCR1 = 255;  
-                TB3CCR2 = 140;   
+                TB3CCR2 = 50;   
                 TB3CCR3 = 0;   
                 break;
 
             case YELLOW:      
-                TB3CCR1 = 220;  
-                TB3CCR2 = 220;   
+                TB3CCR1 = 255;  
+                TB3CCR2 = 149;   
                 TB3CCR3 = 29;   
                 break;
 

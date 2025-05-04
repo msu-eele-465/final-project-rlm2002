@@ -10,19 +10,21 @@
 #include "msp430fr2355.h"
 #include "src/led.h"
 
-game_state current_game_state = IDLE;
-uint8_t seconds = 30;          // timer
-uint8_t value = 0;
-char cur_char = 'x';
-uint8_t first_led_set = 0;
-uint8_t trigger_buzzer = 0;
+volatile game_state current_game_state = IDLE;
+volatile uint8_t seconds = 30;          // timer
+volatile uint8_t tensecs = 3;
+volatile uint8_t secs = 0;
+volatile uint8_t tx_byte_cnt = 0, index1 = 0, index2 = 0;
+volatile char cur_char = 'x';
+volatile uint8_t first_led_set = 0;
+volatile uint8_t trigger_buzzer = 0;
 
 uint8_t secret_pin[] = {RED, RED, 1};
 uint8_t pin[] = {0, 0, 0};
 
 char *lcd_line1_strings[] = {" Push to Start ", "Guess the Code ",
-                 "   Game Over   ", "    WINNER   "};
-char lcd_line2[] = "               ";
+                "  Checking...  ", "   Game Over   ", "    WINNER   "};
+char lcd_line2[] = "00s            ";
 
 // PERSISTENT stores vars in FRAM so they stick around through power cycles
 __attribute__((persistent)) static rgb_LED led1 =
@@ -114,10 +116,10 @@ uint8_t get_dipswitch() {
 */
 void transmit_to_lcd()
 {
-    // UCB0TBCNT = 16;
-    // UCB0I2CSA = 0x0A;
-    // while (UCB0CTLW0 & UCTXSTP);                      // Ensure stop condition got sent
-    // UCB0CTLW0 |= UCTR | UCTXSTT;                      // I2C TX, start condition
+    tx_byte_cnt = 32;
+    UCB0I2CSA = 0x0A;
+    while (UCB0CTLW0 & UCTXSTP);                      // Ensure stop condition got sent
+    UCB0CTLW0 |= UCTR | UCTXSTT;                      // I2C TX, start condition
 }
 
 int main(void) {
@@ -184,16 +186,30 @@ int main(void) {
                 }
             }
             pin[2] = get_dipswitch();
+            // get seconds
+            tensecs = seconds / 10;
+            secs = (seconds % 10);
+            __delay_cycles(100);
+            lcd_line2[0] = (tensecs + '0');
+            lcd_line2[1] = (secs + '0');
+            __delay_cycles(100);
+
         } else if (current_game_state == CHECK){
             // need to check password attempt
             int i;
+            uint8_t check = SUCCESS;
             for (i = 0; i < 3; i++){
                 if (pin[i] != secret_pin[i]){
-
+                    check = FAILURE;
                 }
             }
-            // if check failed, need to allow another attempt
-            // else set current game state to win
+            // if check success, set current game state to win
+            // else need to allow another attempt
+            if (check == SUCCESS) {
+                current_game_state = WIN;
+            } else {
+                current_game_state = IN_PROGRESS;
+            }
         } else if (current_game_state == LOSE) {
             // send lose message to lcd and
             // send push to reset message to lcd
@@ -214,6 +230,44 @@ int main(void) {
 // -- Interrupt Service Routines ------------------------ //
 
 /**
+* transmit_data
+*/
+#pragma vector = EUSCI_B0_VECTOR
+__interrupt void transmit_data(void)
+{
+    switch(UCB0IV)             // determines which IFG has been triggered
+    {
+    case USCI_I2C_UCNACKIFG:
+        UCB0CTL1 |= UCTXSTT;                      //resend start if NACK
+        break;                                      // Vector 4: NACKIFG break
+    case USCI_I2C_UCTXIFG0:
+        if (tx_byte_cnt > 16)                                // Check TX byte counter
+        {
+            UCB0TXBUF = lcd_line1_strings[current_game_state][index1];            // Load TX buffer
+            index1++;
+            tx_byte_cnt--;                              // Decrement TX byte counter
+        }
+        else if (tx_byte_cnt > 0) {
+            UCB0TXBUF = lcd_line2[index2];
+            index2++;
+            tx_byte_cnt--;
+        }
+        else
+        {
+            index1 = 0;
+            index2 = 0;
+            UCB0CTLW0 |= UCTXSTP;                     // I2C stop condition
+            UCB0IFG &= ~UCTXIFG;                      // Clear USCI_B0 TX int flag
+        } 
+        break;                                    
+    default:
+        break;
+    }
+
+}
+
+
+/**
 * Heartbeat LED, read time every 1s
 */
 #pragma vector = TIMER0_B0_VECTOR
@@ -221,17 +275,17 @@ __interrupt void heartbeat_LED(void)
 {
     P1OUT ^= BIT0;          // LED1 xOR
 
-    // if (current_game_state == IN_PROGRESS) {
-    //     if (seconds == 0) {
-    //         // trigger_buzzer = 1;
-    //         current_game_state = LOSE;
-    //     } else {
-    //         seconds--;
-    //     }
-    // }
+    if (current_game_state == IN_PROGRESS) {
+        if (seconds == 0) {
+            trigger_buzzer = 1;
+            current_game_state = LOSE;
+        } else {
+            seconds--;
+        }
+    }
     
 
-    TB1CCTL0 &= ~CCIFG;     // clear flag
+    TB0CCTL0 &= ~CCIFG;     // clear flag
 }
 // ----- end heartbeat_LED-----
 
@@ -243,20 +297,24 @@ __interrupt void get_button_press(void)
 {
     if (current_game_state == IDLE) {
         current_game_state = IN_PROGRESS;
-    } 
-    // else if (current_game_state == IN_PROGRESS) {
-    //     // current_game_state = IN_PROGRESS;
-    // } else if (current_game_state == LOSE
-    //             || current_game_state == WIN) {
-    //     // reset game stats, return to idle
-    //     seconds = 30;
-    //     first_led_set = 0;
-    //     int i;
-    //     for (i = 0; i < 3; i++) {
-    //         pin[i] = 0;
-    //     }
-    //     current_game_state == IDLE;
-    // }
+    } else if (current_game_state == IN_PROGRESS) {
+        current_game_state = CHECK;
+    } else if (current_game_state == LOSE
+                || current_game_state == WIN) {
+        // reset game stats, return to idle
+        seconds = 30;
+        lcd_line2[0] = '0';
+        lcd_line2[1] = '0';
+        first_led_set = 0;
+        set_LED(&led1, OFF, 0);
+        set_LED(&led2, OFF, 1);
+
+        int i;
+        for (i = 0; i < 3; i++) {
+            pin[i] = 0;
+        }
+        current_game_state = IDLE;
+    }
 
     P4IFG &= ~BIT1;
 }
@@ -270,7 +328,6 @@ __interrupt void toggle_buzzer(void)
 {
     trigger_buzzer = 0;
     P2OUT ^= BIT5;
-    __delay_cycles(500000);
     __delay_cycles(500000);
     __delay_cycles(500000);
     __delay_cycles(500000);

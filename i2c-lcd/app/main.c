@@ -9,9 +9,8 @@
 #include "src/lcd.h"
 
 
-uint8_t data;
-uint8_t line;
-uint8_t ;
+char data;
+int ddram_address = 0x00;
 
 int main(void)
 {
@@ -72,7 +71,7 @@ int main(void)
     PM5CTL0 &= ~LOCKLPM5;
 
     while (true)
-    {   
+    {
     }
 }
 
@@ -88,8 +87,22 @@ __interrupt void receive_data(void)
     switch(UCB0IV)             // determines which IFG has been triggered
     {
     case USCI_I2C_UCRXIFG0:                 // ID 0x16: Rx IFG
-        data_received = 1;
-        data = UCB0RXBUF;                   // retrieve data
+
+        lcd_send_command(0x80 | ddram_address);
+        lcd_send_data(UCB0RXBUF);                   // retrieve data
+
+        // determine next address
+        if (ddram_address < 0x0F){
+            ddram_address++;
+        } else if (ddram_address == 0x0F) {
+            ddram_address = 0x40;
+        } else if (ddram_address < 0x4F){
+            ddram_address++;
+        } else if (ddram_address == 0x4F) {
+            ddram_address = 0x00;
+        }
+        
+        
         break;
     default:
         break;
