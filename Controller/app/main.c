@@ -44,7 +44,6 @@ __attribute__((persistent)) static rgb_LED led2 =
 };
 
 Keypad keypad = {
-    .lock_state = LOCKED,                       // locked is 1
     .row_pins = {BIT3, BIT2, BIT1, BIT0},       // order is 5, 6, 7, 8
     .col_pins = {BIT3, BIT2, BIT1, BIT0},       // order is 1, 2, 3, 4
 };
@@ -60,7 +59,9 @@ void transmit_to_lcd()
     while (UCB0CTLW0 & UCTXSTP);                      // Ensure stop condition got sent
     UCB0CTLW0 |= UCTR | UCTXSTT;                      // I2C TX, start condition
 }
-
+/**
+* inits pins, leds, and keypad
+*/
 void init(){
     
     // Disable watchdog timer
