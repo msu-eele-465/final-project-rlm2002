@@ -93,8 +93,8 @@ void set_LED(rgb_LED *sl, LED_State s, uint8_t n)
             
             case PINK:
                 TB3CCR1 = 255;  
-                TB3CCR2 = 150;   
-                TB3CCR3 = 180;   
+                TB3CCR2 = 153;   
+                TB3CCR3 = 255;   
                 break;
             
             case MAGENTA:
@@ -120,14 +120,14 @@ void set_LED(rgb_LED *sl, LED_State s, uint8_t n)
 
             case ORANGE:     
                 TB3CCR4 = 255;  
-                TB3CCR5 = 100;   
+                TB3CCR5 = 50;   
                 TB3CCR6 = 0;   
                 break;
 
             case YELLOW:      
-                TB3CCR4 = 220;  
-                TB3CCR5 = 220;   
-                TB3CCR6 = 0;   
+                TB3CCR4 = 255;  
+                TB3CCR5 = 149;   
+                TB3CCR6 = 29;   
                 break;
 
             case GREEN:
@@ -156,8 +156,8 @@ void set_LED(rgb_LED *sl, LED_State s, uint8_t n)
             
             case PINK:
                 TB3CCR4 = 255;  
-                TB3CCR5 = 100;   
-                TB3CCR6 = 180;   
+                TB3CCR5 = 153;   
+                TB3CCR6 = 255;   
                 break;
             
             case MAGENTA:

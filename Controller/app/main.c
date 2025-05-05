@@ -15,15 +15,16 @@ volatile uint8_t seconds = 30;          // timer
 volatile uint8_t tensecs = 3;
 volatile uint8_t secs = 0;
 volatile uint8_t tx_byte_cnt = 0, index1 = 0, index2 = 0;
-volatile char cur_char = 'x';
+char cur_char = 'x';
 volatile uint8_t first_led_set = 0;
 volatile uint8_t trigger_buzzer = 0;
+volatile uint8_t update_lcd = 0;
 
 uint8_t secret_pin[] = {RED, RED, 1};
 uint8_t pin[] = {0, 0, 0};
 
 char *lcd_line1_strings[] = {" Push to Start ", "Guess the Code ",
-                "  Checking...  ", "   Game Over   ", "    WINNER   "};
+                "  Checking...  ", "    WINNER   ", "   Game Over   "};
 char lcd_line2[] = "00s            ";
 
 // PERSISTENT stores vars in FRAM so they stick around through power cycles
@@ -47,6 +48,18 @@ Keypad keypad = {
     .row_pins = {BIT3, BIT2, BIT1, BIT0},       // order is 5, 6, 7, 8
     .col_pins = {BIT3, BIT2, BIT1, BIT0},       // order is 1, 2, 3, 4
 };
+
+/**
+* inits lcd transmit
+*/
+void transmit_to_lcd()
+{
+    index1 = 0;
+    index2 = 0;
+    tx_byte_cnt = 32;
+    while (UCB0CTLW0 & UCTXSTP);                      // Ensure stop condition got sent
+    UCB0CTLW0 |= UCTR | UCTXSTT;                      // I2C TX, start condition
+}
 
 void init(){
     
@@ -82,6 +95,22 @@ void init(){
     P4IFG &= ~BIT1;             // Clear P4.1 IRQ Flag
     P4IE |= BIT1;               // Enable P4.1 IRQ
 
+    // Configure Pins for I2C
+    P1SEL1 &= ~BIT3;            // P1.3 = SCL
+    P1SEL1 &= ~BIT2;            // P1.2 = SDA
+    P1SEL0 |= BIT2 | BIT3;                            // I2C pins
+
+    // Configure USCI_B0 for I2C mode
+    UCB0CTLW0 |= UCSWRST;                             // put eUSCI_B in reset state
+    UCB0CTLW0 |= UCMODE_3 | UCMST;                    // I2C master mode, SMCLK
+    UCB0CTLW1 |= UCASTP_2;                            // Automatic stop after hit TBCNT
+    UCB0I2CSA = 0x0A;                         // configure slave address
+    UCB0BRW = 0x8;                                    // baudrate = SMCLK / 8
+    UCB0TBCNT = 0;                                    // num bytes to recieve
+
+    UCB0CTLW0 &=~ UCSWRST;                            // clear reset register
+    UCB0IE |= UCTXIE0 | UCNACKIE | UCRXIE0 | UCBCNTIE;// transmit, receive, TBCNT, and NACK
+
     // Timer B0
     // Math: 1s = (1*10^-6)(D1)(D2)(25k)    D1 = 5, D2 = 8
     TB0CTL |= TBCLR;            // Clear timer and dividers
@@ -102,6 +131,10 @@ void init(){
     init_LED(&led1, 0);
     init_LED(&led2, 1);
     init_keypad(&keypad);
+
+    // At the end of init:
+    __delay_cycles(100000);  // Give LCD time to initialize
+    transmit_to_lcd();
 }
 
 /**
@@ -111,27 +144,13 @@ uint8_t get_dipswitch() {
     return P3IN & 0x0F;
 }
 
-/**
-* inits lcd transmit
-*/
-void transmit_to_lcd()
-{
-    tx_byte_cnt = 32;
-    UCB0I2CSA = 0x0A;
-    while (UCB0CTLW0 & UCTXSTP);                      // Ensure stop condition got sent
-    UCB0CTLW0 |= UCTR | UCTXSTT;                      // I2C TX, start condition
-}
-
 int main(void) {
     init();
     uint8_t ret = FAILURE;
 
     while(1)
     {
-        if (current_game_state == IDLE) {
-            // transmit Push Start to line 1 of lcd
-
-        } else if (current_game_state == IN_PROGRESS) {
+        if (current_game_state == IN_PROGRESS) {
             ret = scan_keypad(&keypad, &cur_char);
             if (ret == SUCCESS) {
                 // ignore non-digit input bc i literally do not want to bother with it
@@ -186,13 +205,6 @@ int main(void) {
                 }
             }
             pin[2] = get_dipswitch();
-            // get seconds
-            tensecs = seconds / 10;
-            secs = (seconds % 10);
-            __delay_cycles(100);
-            lcd_line2[0] = (tensecs + '0');
-            lcd_line2[1] = (secs + '0');
-            __delay_cycles(100);
 
         } else if (current_game_state == CHECK){
             // need to check password attempt
@@ -207,15 +219,15 @@ int main(void) {
             // else need to allow another attempt
             if (check == SUCCESS) {
                 current_game_state = WIN;
+                update_lcd = 1;
             } else {
                 current_game_state = IN_PROGRESS;
             }
-        } else if (current_game_state == LOSE) {
-            // send lose message to lcd and
-            // send push to reset message to lcd
-        } else if (current_game_state == WIN) {
-            // send win message to lcd
-            // send push to reset message to lcd
+        }
+
+        if (update_lcd) {
+            update_lcd = 0;
+            transmit_to_lcd();
         }
 
         if (trigger_buzzer) {
@@ -237,31 +249,29 @@ __interrupt void transmit_data(void)
 {
     switch(UCB0IV)             // determines which IFG has been triggered
     {
-    case USCI_I2C_UCNACKIFG:
-        UCB0CTL1 |= UCTXSTT;                      //resend start if NACK
-        break;                                      // Vector 4: NACKIFG break
-    case USCI_I2C_UCTXIFG0:
-        if (tx_byte_cnt > 16)                                // Check TX byte counter
-        {
-            UCB0TXBUF = lcd_line1_strings[current_game_state][index1];            // Load TX buffer
-            index1++;
-            tx_byte_cnt--;                              // Decrement TX byte counter
-        }
-        else if (tx_byte_cnt > 0) {
-            UCB0TXBUF = lcd_line2[index2];
-            index2++;
-            tx_byte_cnt--;
-        }
-        else
-        {
-            index1 = 0;
-            index2 = 0;
-            UCB0CTLW0 |= UCTXSTP;                     // I2C stop condition
-            UCB0IFG &= ~UCTXIFG;                      // Clear USCI_B0 TX int flag
-        } 
-        break;                                    
-    default:
-        break;
+        case USCI_I2C_UCNACKIFG:
+            UCB0CTL1 |= UCTXSTT;                      //resend start if NACK
+            break;                                    // Vector 4: NACKIFG break
+        case USCI_I2C_UCTXIFG0:
+            if (tx_byte_cnt > 16)                                // Check TX byte counter
+            {
+                UCB0TXBUF = lcd_line1_strings[current_game_state][index1];            // Load TX buffer
+                index1++;
+                tx_byte_cnt--;                              // Decrement TX byte counter
+            }
+            else if (tx_byte_cnt > 0) {
+                UCB0TXBUF = lcd_line2[index2];
+                index2++;
+                tx_byte_cnt--;
+            }
+            else
+            {
+                UCB0CTLW0 |= UCTXSTP;                     // I2C stop condition
+                UCB0IFG &= ~UCTXIFG;                      // Clear USCI_B0 TX int flag
+            } 
+            break;                                    
+        default:
+            break;
     }
 
 }
@@ -276,12 +286,20 @@ __interrupt void heartbeat_LED(void)
     P1OUT ^= BIT0;          // LED1 xOR
 
     if (current_game_state == IN_PROGRESS) {
+        // get seconds
+        tensecs = seconds / 10;
+        secs = (seconds % 10);
+        __delay_cycles(100);
+        lcd_line2[0] = (tensecs + '0');
+        lcd_line2[1] = (secs + '0');
+        __delay_cycles(100);
         if (seconds == 0) {
             trigger_buzzer = 1;
             current_game_state = LOSE;
         } else {
             seconds--;
         }
+        update_lcd = 1;
     }
     
 
@@ -295,6 +313,7 @@ __interrupt void heartbeat_LED(void)
 #pragma vector = PORT4_VECTOR
 __interrupt void get_button_press(void)
 {
+    game_state prev_state = current_game_state;
     if (current_game_state == IDLE) {
         current_game_state = IN_PROGRESS;
     } else if (current_game_state == IN_PROGRESS) {
@@ -314,6 +333,10 @@ __interrupt void get_button_press(void)
             pin[i] = 0;
         }
         current_game_state = IDLE;
+    }
+
+    if (current_game_state != prev_state) {
+        update_lcd = 1;
     }
 
     P4IFG &= ~BIT1;

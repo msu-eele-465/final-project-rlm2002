@@ -9,8 +9,10 @@
 #include "src/lcd.h"
 
 
-char data;
-int ddram_address = 0x00;
+volatile char rx_data[32];
+uint8_t idx = 0;
+uint8_t received_data = 0, data_received = 0;
+uint8_t data_received_count;
 
 int main(void)
 {
@@ -25,7 +27,7 @@ int main(void)
 
     // 2. Configure eUSCI_B0
     UCB0CTLW0 |= UCMODE_3;                //I2C slave mode, SMCLK
-    UCB0I2COA0 = 0x0B | UCOAEN;           //SLAVE0 own address is 0x0B| enable
+    UCB0I2COA0 = 0x0A | UCOAEN;           //SLAVE0 own address is 0x0A| enable
 
     // 3. Configure Ports as I2C
     P1SEL1 &= ~BIT3;            // P1.3 = SCL
@@ -38,7 +40,7 @@ int main(void)
     UCB0CTLW0 &= ~UCSWRST;
 
     // 5. Enable Interrupts
-    UCB0IE |= UCRXIE0;          // Enable I2C Rx0 IRQ
+    UCB0IE |= UCRXIE0 | UCSTPIE;          // Enable I2C Rx0 IRQ
 
      // Timer B0
     // Math: 1s = (1*10^-6)(D1)(D2)(25k)    D1 = 5, D2 = 8
@@ -59,10 +61,6 @@ int main(void)
 
     // variable initiation
 
-    data = 0;
-    line = 0;
-    data_received = 0;
-
     __enable_interrupt();       // Enable Maskable IRQs
 
     init_lcd();
@@ -72,6 +70,19 @@ int main(void)
 
     while (true)
     {
+        if (received_data) {
+            uint8_t i;
+            lcd_send_command(LCD_RETURN_HOME);
+            for (i = 0; i < 16; i++){
+                lcd_send_data(rx_data[i]);
+            }
+            DELAY_0001;
+            lcd_send_command(LCD_BOTTOM_LINE);
+            for (i = 16; i < 32; i++){
+                lcd_send_data(rx_data[i]);
+            }
+            received_data = 0;
+        }
     }
 }
 
@@ -86,26 +97,20 @@ __interrupt void receive_data(void)
 {
     switch(UCB0IV)             // determines which IFG has been triggered
     {
-    case USCI_I2C_UCRXIFG0:                 // ID 0x16: Rx IFG
-
-        lcd_send_command(0x80 | ddram_address);
-        lcd_send_data(UCB0RXBUF);                   // retrieve data
-
-        // determine next address
-        if (ddram_address < 0x0F){
-            ddram_address++;
-        } else if (ddram_address == 0x0F) {
-            ddram_address = 0x40;
-        } else if (ddram_address < 0x4F){
-            ddram_address++;
-        } else if (ddram_address == 0x4F) {
-            ddram_address = 0x00;
-        }
-        
-        
-        break;
-    default:
-        break;
+        case USCI_I2C_UCRXIFG0:                 // ID 0x16: Rx IFG
+            if (idx < 32) {
+                rx_data[idx] = UCB0RXBUF;                   // retrieve data
+                idx++;
+            }
+            break;
+        case USCI_I2C_UCSTPIFG:            // Stop condition
+            received_data = 1;
+            data_received = 1;
+            idx = 0;                  // Reset index for next reception
+            UCB0IFG &= ~UCSTPIFG;
+            break;
+        default:
+            break;
     }
 
 }
@@ -118,20 +123,6 @@ __interrupt void receive_data(void)
 __interrupt void heartbeat_LED(void)
 {
     P2OUT ^= BIT0;          // P2.0 xOR
-    // if(data_received != 0)
-    // {
-    //     // Math: .2s = (1*10^-6)(D1)(D2)(5k)    D1 = 5, D2 = 8
-    //     TB0CCR0 = 5000;
-    //     data_recieved_count++;
-        
-    //     if(data_recieved_count == 10)
-    //     {
-    //         data_received = 0;
-    //         data_recieved_count = 0;
-    //         TB0CCR0 = 25000;
-    //     }
-    // }
-
 
     TB0CCTL0 &= ~CCIFG;     // clear flag
 }
