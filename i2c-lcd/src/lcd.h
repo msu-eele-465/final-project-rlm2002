@@ -44,22 +44,6 @@ void lcd_send(uint8_t data, uint8_t is_data);
 */
 void lcd_send_string(char *str);
 
-/**
-* set temperature to the 3 digits that've been sent over
-* @param mode : using ambient or plant temp
-* @param data : array for temp
-*/
-void lcd_set_temperature(uint8_t mode, uint8_t *data);
-
-/**
-* toggle cursor on lcd
-*/
-void lcd_toggle_cursor();
-
-/**
-* toggle cursor blink on lcd
-*/ 
-void lcd_toggle_blink();
 
 /**
 * lcd initialization
@@ -70,10 +54,5 @@ void lcd_set_function();
 * clear line
 */ 
 void lcd_clear_line(uint8_t cmd);
-
-/*
-* load custom characters to cgram
-*/
-void load_custom_chars();
 
 #endif

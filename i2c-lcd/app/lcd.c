@@ -24,8 +24,6 @@ void init_lcd(){
     __delay_cycles(50000);
     lcd_set_function();
     DELAY_001;
-    load_custom_chars();
-    DELAY_001;
     lcd_send_command(LCD_DISPLAY_ON);
     DELAY_001;
     lcd_send_command(LCD_ENTRY_MODE_SET);
@@ -62,25 +60,6 @@ void lcd_send_string(char *str){
         lcd_send_data(*str++);
     }
 }
-
-// TODO this function might be repurposed
-// void send_lcd_mode(uint8_t mode)
-// {
-//     lcd_send_command(LCD_RETURN_HOME);
-//     DELAY_0001;
-//     lcd_send_string((char*)lcd_strings[mode]);
-// }
-
-// void lcd_set_time(uint8_t *data)
-// {
-//     // set DDRAM to bottom left corner
-//     lcd_send_command(LCD_BOTTOM_LINE);       
-//     DELAY_0001;
-//     time_n[2] = data[0] + '0'; // 100 s
-//     time_n[3] = data[1] + '0'; // 10 s
-//     time_n[4] = data[2] + '0'; // 1 s
-//     lcd_send_string(time_n);
-// }
 
 void lcd_set_function(){
     P1OUT &= ~BIT1;                 // RS = 0 for command
@@ -123,19 +102,4 @@ void lcd_clear_line(uint8_t cmd)
         DELAY_0001;
     }
     lcd_send_command(cmd);
-}
-
-void load_custom_chars(){
-    uint8_t i;
-    lcd_send_command(0x40);     // set CGRAM to address 00
-    // for (i = 0; i < 8; i++) {
-    //     lcd_send_data(ambient_custom[i]);
-    // }
-
-    lcd_send_command(0x41);     // set CGRAM to address 01
-    // for (i = 0; i < 8; i++) {
-    //     lcd_send_data(plant_custom[i]);
-    // }
-
-    lcd_send_command(LCD_RETURN_HOME); // return DDRAM to address 00
 }
