@@ -19,12 +19,14 @@ char cur_char = 'x';
 volatile uint8_t first_led_set = 0;
 volatile uint8_t trigger_buzzer = 0;
 volatile uint8_t update_lcd = 0;
+volatile uint8_t flash_led = 0;
+volatile uint8_t flash_cnt = 0;
 
 uint8_t secret_pin[] = {RED, RED, 1};
 uint8_t pin[] = {0, 0, 0};
 
-char *lcd_line1_strings[] = {" Push to Start ", "Guess the Code ",
-                "  Checking...  ", "    WINNER   ", "   Game Over   "};
+char *lcd_line1_strings[] = {" Push to Start  ", "Guess the Code  ",
+                "  Checking...   ", "    WINNER    ", "   Game Over    "};
 char lcd_line2[] = "00s            ";
 
 // PERSISTENT stores vars in FRAM so they stick around through power cycles
@@ -125,6 +127,19 @@ void init(){
 
     TB0CCTL0 &= ~CCIFG;         // Clear CCR0
     TB0CCTL0 |= CCIE;           // Enable IRQ
+
+    // Timer B1
+    // Math: 1s = (1*10^-6)(D1)(D2)(25k)    D1 = 5, D2 = 4
+    TB1CTL |= TBCLR;            // Clear timer and dividers
+    TB1CTL |= TBSSEL__SMCLK;    // Source = SMCLK
+    TB1CTL |= MC__UP;           // Mode UP
+    TB1CTL |= ID__4;            // divide by 4 
+    TB1EX0 |= TBIDEX__5;        // divide by 5 (100)
+
+    TB1CCR0 = 25000;
+
+    TB1CCTL0 &= ~CCIFG;         // Clear CCR0
+    TB1CCTL0 |= CCIE;           // Enable IRQ
 
     __enable_interrupt();   // enable maskable IRQs
     PM5CTL0 &= ~LOCKLPM5;   // turn on GPIO
@@ -279,13 +294,11 @@ __interrupt void transmit_data(void)
 
 
 /**
-* Heartbeat LED, read time every 1s
+* read time every 1s
 */
 #pragma vector = TIMER0_B0_VECTOR
-__interrupt void heartbeat_LED(void)
+__interrupt void read_time(void)
 {
-    P1OUT ^= BIT0;          // LED1 xOR
-
     if (current_game_state == IN_PROGRESS) {
         // get seconds
         tensecs = seconds / 10;
@@ -299,6 +312,10 @@ __interrupt void heartbeat_LED(void)
             current_game_state = LOSE;
         } else {
             seconds--;
+
+            if (seconds == 10) {
+                flash_led = 1;
+            }
         }
         update_lcd = 1;
     }
@@ -307,6 +324,34 @@ __interrupt void heartbeat_LED(void)
     TB0CCTL0 &= ~CCIFG;     // clear flag
 }
 // ----- end heartbeat_LED-----
+
+/**
+* signal when game has 10s left
+*/
+#pragma vector = TIMER1_B0_VECTOR
+__interrupt void signal_led(void)
+{
+    if (current_game_state == IN_PROGRESS) {
+        P1OUT ^= BIT0;          // LED1 xOR
+    } else {
+        P1OUT &= ~BIT0;         // LED off
+    }
+
+    if (flash_led) {
+        // Math: .2s = (1*10^-6)(D1)(D2)(5k)    D1 = 5, D2 = 8
+        TB1CCR0 = 5000;
+        flash_cnt++;
+        
+        if(flash_cnt == 15)
+        {
+            flash_led = 0;
+            flash_cnt = 0;
+            TB1CCR0 = 25000;
+        }
+    }
+
+    TB1CCTL0 &= ~CCIFG;     // clear flag
+}
 
 /*
  * Handles changes in state due to button press
